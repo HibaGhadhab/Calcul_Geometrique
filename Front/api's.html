@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Calcul géometrique API</title>
+		<meta charset="utf-8" />
+		
+		<!-- Bibliothèque de base: Leaflet-->
+		<link rel="stylesheet" href="libs/leaflet.css"/>
+		<script src="libs/leaflet.js"></script>
+		
+		<!-- Menu Layers Style CSS-->
+		<link rel="stylesheet" href="libs/styledLayerControl.css" />
+		<script src="libs/styledLayerControl.js"></script>
+		
+		<!-- Draw-->
+		<script src= "https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/0.2.3/leaflet.draw-src.js"></script>
+		<link rel="stylesheet" href= "https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/0.2.3/leaflet.draw.css">
+		<script src= "https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/0.2.3/leaflet.draw.js"></script>
+		
+		<!-- Slide menu-->
+		<link rel="stylesheet" href="libs/slide_menu/SlideMenu.css" />
+		<script src="libs/slide_menu/SlideMenu.js"></script>
+		<link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css"> 
+		
+		<!-- GeoCoder-->
+		<link rel="stylesheet" href="libs/Control.OSMGeocoder.css"/>
+		<script src="libs/Control.OSMGeocoder.js"></script>
+		
+		<!-- Overview-->
+		<link rel="stylesheet" href="libs/overview/MiniMap.css" />
+		<script src="libs/overview/MiniMap.js"></script>
+	 
+		<!-- Localisation-->
+		<link rel="stylesheet" href="libs/L.Control.Locate.min.css" />
+		<script src="libs/L.Control.Locate.js"></script>
+		
+		<!-- Mouse position-->
+		<link rel="stylesheet" href="libs/L.Control.MousePosition.css" />
+		<script src="libs/L.Control.MousePosition.js"></script>
+		
+		<!-- Navigation Bar-->
+		<link rel="stylesheet" href="libs/NavBar/NavBar.css"/>
+		<script src="libs/NavBar/NavBar.js"></script>
+		
+		<!-- Font-->
+		<link href="libs/font-awesome.min.css" rel="stylesheet">
+		
+		<!-- jquery-->
+		<script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+		<script src="https://code.jquery.com/jquery-3.3.1.min.js" ></script>
+		<script src="https://code.jquery.com/jquery-3.2.1.min.js" ></script>
+		
+		<!-- PolylineMeasure-->
+		<link rel="stylesheet" href="libs/Leaflet.PolylineMeasure.css" />
+		<script src="libs/Leaflet.PolylineMeasure.js"></script>
+		
+	    <!-- Materialize-->
+		<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+		  <link href="css/materialize.css" type="text/css" rel="stylesheet" media="screen,projection"/>
+		  <link href="css/style.css" type="text/css" rel="stylesheet" media="screen,projection"/>	
+		<style>
+			body 
+			{
+				padding: 0;
+				margin: 0;
+			}
+			html, body, #map 
+			{
+				height: 100%;
+				width: 100%;	
+			}
+			h1 { color: #111; font-family: 'Open Sans Condensed', sans-serif; font-size: 64px; font-weight: 700; line-height: 64px; margin: 0 0 0; padding: 20px 30px; text-align: center; text-transform: uppercase; }
+			h2 { color: #ffffff; font-family: 'Raleway',sans-serif; font-size: 30px; font-weight: 800; line-height: 36px; margin: 0 0 24px; text-align: center; }
+			p { color: #f8f8f8; font-family: 'Raleway',sans-serif; font-size: 18px; font-weight: 500; line-height: 32px; margin: 0 0 24px; }
+		</style>
+
+	</head>
+	
+	<body>
+		<!--<h1>Calcul géometrique APi's</h1>-->		
+		<nav class="light-blue darken-4" role="navigation">
+		<div class="nav-wrapper container"><a id="logo-container" href="#" class="brand-logo">Calcul géometrique</a>
+		  <ul class="right hide-on-med-and-down">
+			<li>
+			<form id="formFile" enctype="multipart/form-data"> 
+				<input type="file" id="myfile" name="file">
+				<input type="submit" id="btnSubmit" value="Upload" />
+			</form>
+			<li> <span id="fileUploaded" style="display:none;"> file uploaded!</span></li>
+			</li>
+			<li><a href="#" id="mbr">MBR <i class="material-icons right">crop_landscape</i></a></li>
+			<li><a href="#" id="mbc">MBC <i class="material-icons right">panorama_fish_eye</i></a></li>
+		  </ul>
+		  <ul id="nav-mobile" class="side-nav">
+			<li><a href="#">Navbar Link</a></li>
+		  </ul>
+		  <a href="#" data-activates="nav-mobile" class="button-collapse"><i class="material-icons">menu</i></a>
+		</div>
+		</nav>
+		
+		<!-- Emplacement de la map dont le nom est "map" -->		
+		<div id="map" style="height:89%;"></div>
+			
+		<script> 
+			///// Fond de base
+			var OpenStreetMap = L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+			var WorldImagery = L.tileLayer('http://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');		
+			
+			///// Configuration de la map	
+			var map = L.map('map', {
+					layers: [OpenStreetMap], /// fond de base à choisir
+					center: [48.85341, 2.3488],/// coordonnées
+					zoom: 11	//// zoom par defaut
+				});
+				
+			let urlmbr = "http://localhost:8080/MBR";
+			let urlmbc = "http://localhost:8080/MBC";
+			let colorMbr = "red";
+			let colorMbc = "green";
+			function getAndDrawPolygon(urlPolygon,colorPolygon){
+				$.ajax({
+				  url: urlPolygon,	
+				  success: function(reponseR) {
+				  console.log("reponse = " + reponseR);
+					var latlngsR = [];
+					let coordinatesR = reponseR.geometry.coordinates[0];
+					console.log("coordiantes" + coordinatesR ) ;
+					var rectangle = L.polygon(coordinatesR, {color: colorPolygon}).addTo(map);
+					map.fitBounds(rectangle.getBounds());
+					console.log("data is returned " + reponseR );
+				  },error: function(xhr,data){
+					console.log("error" + data);
+				  }
+				});
+			}
+			
+			$("#formFile").on("submit",function(e){
+				e.preventDefault();
+				$.ajax({
+					type: "POST",
+					url: "http://localhost:8080/saveFile",
+					data: new FormData(this),
+					contentType: false,
+					processData:false,
+					success: function(response){
+						console.log(response);
+						$("#fileUploaded").css("display","inline-block");
+						
+			var basePolygon = L.polygon(response, {color: 'blue'}).addTo(map);
+			map.fitBounds(basePolygon.getBounds());
+					}
+				});
+				console.log("a");
+			});
+			
+			
+			var mbrClicked = false;
+			var mbcClicked = false;
+			//pour sélectionner les bouttons et toggle
+			$("#mbr").click(function(){
+				if(!mbrClicked){
+				    var file = document.getElementById("myfile"); //recupérer le fichier 
+					file.disabled = false; //pour que le bouton choisi reste toujours disponible
+					getAndDrawPolygon(urlmbr, colorMbr);
+					mbrClicked = true;
+				}
+				else{
+					mbrClicked = false;
+					$( "path[stroke='" +  colorMbr + "']" ).remove();
+			
+				}
+				
+			});
+			$("#mbc").click(function(){
+				if(!mbcClicked){
+					getAndDrawPolygon(urlmbc, colorMbc);
+					mbcClicked = true;
+				}
+				else{
+					mbcClicked = false;
+					$( "path[stroke='"+ colorMbc +"']" ).remove();
+				
+				}
+				
+			});
+			
+			//// Add the Find to the map //fonction recherche
+			var osmGeocoder = new L.Control.OSMGeocoder();
+			map.addControl(osmGeocoder);
+					
+			///// Add the Overview to the map //petite carte au coin a droite en bas
+			var osm2 = L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+			var miniMap = new L.Control.MiniMap(osm2, { toggleDisplay: true }).addTo(map);
+			
+			///// Add the scale control to the map //échelle de la carte
+			L.control.scale().addTo(map);
+				
+			///// Add the Navigation Bar to the map 
+			L.control.navbar({position: 'topleft'}).addTo(map);
+				
+			///// Add the geolocate control to the map 
+			L.control.locate().addTo(map);
+			
+			//PolylineMeasure //Dessiner une ligne et voir sa longueur
+			L.control.polylineMeasure(options).addTo(map);
+			options = {
+					position: 'topleft',                    // Position to show the control. Possible values are: 'topright', 'topleft', 'bottomright', 'bottomleft'
+					imperial: false,                        // Show imperial or metric distances
+					measureControlTitle: '',                // Title for the control
+					measureControlLabel: '&#8614;',         // HTML to place inside the control
+					measureControlClasses: [],              // Classes to apply to the control
+					backgroundColor: '#8f8',                // Background color for control when selected
+					cursor: 'crosshair',                    // Cursor type to show when creating measurements
+					clearMeasurementsOnStop: true,          // Clear all the measurements when the control is unselected
+					showMeasurementsClearControl: false,    // Show a control to clear all the measurements
+					clearControlTitle: 'Clear',             // Title text to show on the clear measurements control button
+					clearControlLabel: '&times',            // Clear control inner html
+					clearControlClasses: [],                // Collection of classes to add to clear control button
+					tempLine: {                             // Styling settings for the temporary dashed line
+						color: '#00f',                      // Dashed line color
+						weight: 2                           // Dashed line weight
+					},          
+					fixedLine: {                            // Styling for the solid line
+						color: '#006',                      // Solid line color
+						weight: 2                           // Solid line weight
+					},
+					startCircle: {                          // Style settings for circle marker indicating the starting point of the polyline
+						color: '#000',                      // Color of the border of the circle
+						weight: 1,                          // Weight of the circle
+						fillColor: '#0f0',                  // Fill color of the circle
+						fillOpacity: 1,                     // Fill opacity of the circle
+						radius: 3                           // Radius of the circle
+					},
+					intermedCircle: {                       // Style settings for all circle markers between startCircle and endCircle
+						color: '#000',                      // Color of the border of the circle
+						weight: 1,                          // Weight of the circle
+						fillColor: '#ff0',                  // Fill color of the circle
+						fillOpacity: 1,                     // Fill opacity of the circle
+						radius: 3                           // Radius of the circle
+					},
+					currentCircle: {                        // Style settings for circle marker indicating the latest point of the polyline during drawing a line
+						color: '#000',                      // Color of the border of the circle
+						weight: 1,                          // Weight of the circle
+						fillColor: '#f0f',                  // Fill color of the circle
+						fillOpacity: 1,                     // Fill opacity of the circle
+						radius: 3                           // Radius of the circle
+					},
+					endCircle: {                             // Style settings for circle marker indicating the last point of the polyline
+						color: '#000',                      // Color of the border of the circle
+						weight: 1,                          // Weight of the circle
+						fillColor: '#f00',                  // Fill color of the circle
+						fillOpacity: 1,                     // Fill opacity of the circle
+						radius: 3                           // Radius of the circle
+					},
+			};
+		
+			///// config draw feature  //Dessiner tous les autres shapes (polygon, rectongle, circle, point)
+			var drawControl = new L.Control.Draw({
+				position: 'topleft',
+				draw: {
+					polygon: {
+						shapeOptions: {color: 'purple'},
+						allowIntersection: false,
+						drawError: {color: 'orange',timeout: 1000},
+						showArea: true,
+						metric: false,
+						repeatMode: true
+					},
+					circle: true,
+					polyline: true,
+					rectangle: true, 
+					marker: true
+					}}); 
+			map.addControl(drawControl);
+		
+			map.on('draw:created', function (e) {  /////Pour que les dessins (de tous les shapes) restent affichés
+			var type = e.layerType,
+				layer = e.layer;
+			drawnItems.addLayer(layer);			
+			});
+			
+			//////récuper les coordonnées quand on clique sur la carte
+			var popup = L.popup();
+			function onMapClick(e) {
+				popup
+					.setLatLng(e.latlng)
+					.setContent("Vous avez cliqué sur le point de " + e.latlng.toString())
+					.openOn(map);				
+			}
+			map.on('click', onMapClick);
+		</script>
+			
+	</body>
+</html>
